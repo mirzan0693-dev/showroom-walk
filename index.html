@@ -504,6 +504,7 @@ function sheet(html,onMount){
 }
 function closeSheet(){$("#sheetHost").innerHTML=""}
 function copy(text){
+  if(window.Android&&Android.copy){try{Android.copy(text);toast("Copied");return}catch(e){}}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(()=>toast("Copied"),()=>fallback())}else fallback();
   function fallback(){const p=document.querySelector(".sheet pre,.sheet textarea");if(p){const rg=document.createRange();rg.selectNodeContents(p);const s=getSelection();s.removeAllRanges();s.addRange(rg)}toast("Select the text and copy it manually")}
 }
@@ -566,8 +567,8 @@ $("#summaryBtn").addEventListener("click",()=>{
   const v=visit();
   sheet(`<h3>Client summary</h3><p>For ${esc(typeOf(v).name)}. Ready to paste into WhatsApp. Only filled-in items appear; red flags stay out.</p>
    ${v.types.length>1?`<div class="seg">${v.types.map(t=>`<button data-st="${t.id}" aria-pressed="${t.id===v.curType}">${esc(t.name)}</button>`).join("")}</div>`:""}
-   <pre id="sumTxt">${esc(clientSummary())}</pre><div class="row"><button class="bbtn pri" id="cp">Copy text</button><button class="bbtn" data-close>Close</button></div>`,
-   host=>{$("#cp").onclick=()=>copy(clientSummary());host.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{v.curType=b.dataset.st;save();renderHeader();$("#summaryBtn").click()})});
+   <pre id="sumTxt">${esc(clientSummary())}</pre><div class="row"><button class="bbtn pri" id="cp">Copy text</button>${window.Android&&Android.share?'<button class="bbtn" id="shr">Share</button>':""}<button class="bbtn" data-close>Close</button></div>`,
+   host=>{$("#cp").onclick=()=>copy(clientSummary());const sh=$("#shr");if(sh)sh.onclick=()=>Android.share(clientSummary());host.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{v.curType=b.dataset.st;save();renderHeader();$("#summaryBtn").click()})});
 });
 $("#flagsBtn").addEventListener("click",()=>{
   sheet(`<h3>Red flags</h3><p>Your internal list of things to question the sales PIC about.</p><pre>${esc(flagsList())}</pre><div class="row"><button class="bbtn pri" id="cp">Copy list</button><button class="bbtn" data-close>Close</button></div>`,
@@ -822,6 +823,7 @@ function openReel(kind){
   });
 }
 
+window.__back=()=>{if($("#sheetHost").innerHTML){closeSheet();render();return true}if(openItem){openItem=null;renderMain();return true}return false};
 const hostTheme=document.documentElement.getAttribute("data-theme");
 load();render();
 </script>

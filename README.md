@@ -2,7 +2,11 @@
 
 A phone-first checklist for real estate negotiators visiting a developer's sales gallery or show unit.
 
-**Use it:** enable GitHub Pages (Settings → Pages → Deploy from branch → `main` / root) and open the link on your phone. Add it to your home screen.
+**Web:** https://mirzan0693-dev.github.io/showroom-walk/ (add it to your home screen).
+
+**Android APK:** download `showroom-walk.apk` from the [latest release](https://github.com/mirzan0693-dev/showroom-walk/releases/latest). GitHub Actions rebuilds it on every push to `main`. Updates install over the old version and keep your data.
+
+The APK is a WebView wrapper around the same `index.html` (in `android/`), with native copy, a Share button for the client summary, photo picker and back-button support.
 
 ## How it works
 
