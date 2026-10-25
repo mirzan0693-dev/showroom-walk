@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Showroom Walk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-column field clipboard. Sticky header (visit picker, tape-measure progress, section tabs,
+   unit-type strip), item rows that open into a fill-in panel, bottom bar for outputs, sheets for tools. */
+:root{
+  --bg:#E9EBE6;--paper:#F7F8F4;--ink:#1A1E1B;--muted:#5D655F;--line:#C9CEC6;
+  --tape:#F0BE2A;--tape-ink:#1A1E1B;--tape-soft:#F7E3A6;--flag:#C8372D;--ok:#2F7A4B;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --fs:15px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141715;--paper:#1D211E;--ink:#E4E7E0;--muted:#98A199;--line:#323833;
+  --tape:#E8B921;--tape-ink:#141715;--tape-soft:#4A3F17;--flag:#EE6A5E;--ok:#5FBF85;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141715;--paper:#1D211E;--ink:#E4E7E0;--muted:#98A199;--line:#323833;
+  --tape:#E8B921;--tape-ink:#141715;--tape-soft:#4A3F17;--flag:#EE6A5E;--ok:#5FBF85;color-scheme:dark}
+:root.big{--fs:17.5px}
+
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font:var(--fs)/1.5 var(--body);margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--tape);outline-offset:2px}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+.hrow{display:flex;align-items:center;gap:8px;padding-block:12px 8px}
+.brand{font-family:var(--display);font-stretch:70%;font-weight:800;font-size:22px;text-transform:uppercase;line-height:1;white-space:nowrap}
+.brand small{display:block;font-family:var(--mono);font-stretch:100%;font-weight:400;font-size:10.5px;letter-spacing:.08em;color:var(--muted);margin-top:3px}
+.visit{flex:1;min-width:0;display:flex;gap:6px;justify-content:flex-end}
+.visit select{min-width:0;flex:0 1 auto;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 8px;font-weight:600;font-size:14px}
+.ibtn{border:1px solid var(--line);background:var(--bg);border-radius:4px;padding:7px 10px;font-size:13px;font-weight:600;white-space:nowrap;display:inline-grid;place-items:center}
+.ibtn:hover{border-color:var(--ink)}
+.ibtn svg{width:18px;height:18px}
+
+.tape{position:relative;height:26px;margin-block:2px 8px;background:var(--bg);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.tape .fill{position:absolute;inset:0 auto 0 0;background:var(--tape);transition:width .3s}
+.tape .ticks{position:absolute;inset:0;background-image:repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px 10%),repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px 2%);background-size:100% 9px,100% 5px;background-repeat:no-repeat;opacity:.55}
+.tape .read{position:absolute;right:8px;top:50%;transform:translateY(-50%);font:500 12px var(--mono);font-variant-numeric:tabular-nums}
+.tape .read b{font-weight:600}
+
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-inline:-4px}
+nav.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:0;background:none;padding:8px 10px 9px;border-bottom:3px solid transparent;font-family:var(--display);font-stretch:80%;font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);display:flex;gap:6px;align-items:baseline}
+.tab .ct{font:500 11px var(--mono);text-transform:none;letter-spacing:0}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--tape)}
+
+.types{display:flex;gap:6px;align-items:center;overflow-x:auto;scrollbar-width:none;padding-block:8px;border-top:1px dashed var(--line)}
+.types::-webkit-scrollbar{display:none}
+.types .lbl{font:500 11px var(--mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;flex:0 0 auto}
+.tchip{flex:0 0 auto;border:1px solid var(--line);background:transparent;border-radius:3px;padding:4px 10px;font-size:13px;font-weight:600}
+.tchip[aria-pressed="true"]{background:var(--tape);border-color:var(--tape);color:var(--tape-ink)}
+.tchip.add{border-style:dashed;font-weight:500;color:var(--muted)}
+
+main{padding-block:18px 120px}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--tape);background:var(--tape-soft);border-radius:4px;padding:8px 10px;margin-bottom:14px;font-size:13.5px}
+.sechead{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline;margin-bottom:14px}
+.secno{font:500 12px var(--mono);color:var(--muted);grid-row:span 2;border:1px solid var(--line);padding:2px 6px;border-radius:3px}
+.sechead h2{margin:0;font-family:var(--display);font-stretch:75%;font-weight:800;font-size:26px;line-height:1.05;text-transform:uppercase;text-wrap:balance}
+.sechead p{margin:0;color:var(--muted);font-size:14px;max-width:62ch}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.chipf{border:1px solid var(--line);background:transparent;border-radius:99px;padding:4px 11px;font-size:12.5px;font-weight:500}
+.chipf[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+.list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.item{border-bottom:1px solid var(--line)}
+.item.open{background:var(--paper)}
+.irow{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:start;padding:12px 4px}
+.box{width:26px;height:26px;border:2px solid var(--ink);border-radius:3px;background:transparent;display:grid;place-items:center;padding:0;margin-top:1px}
+.box svg{width:16px;height:16px;opacity:0}
+.item.done .box{background:var(--ink)}
+.item.done .box svg{opacity:1;stroke:var(--paper)}
+.ititle{border:0;background:none;padding:0;text-align:left;min-width:0}
+.ititle strong{display:block;font-weight:600;font-size:1em;line-height:1.35}
+.item.done .ititle strong{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.ititle span{display:block;color:var(--muted);font-size:.87em;margin-top:2px}
+.meta{display:flex;gap:6px;align-items:center;padding-top:3px;flex-wrap:wrap;justify-content:flex-end;max-width:110px}
+.mk{font:500 11px var(--mono);color:var(--muted);white-space:nowrap}
+.mk.fl{color:var(--flag);font-weight:600}
+.mk.ty{border:1px solid var(--line);padding:0 4px;border-radius:2px}
+.panel{padding:2px 4px 16px 44px;display:flex;flex-direction:column;gap:12px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-width:0}
+.inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:4px;background:var(--bg);overflow:hidden}
+.inp input,.inp select{flex:1;min-width:0;border:0;background:transparent;padding:8px 9px;font-size:1em;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);font-variant-numeric:tabular-nums}
+.inp input::placeholder{color:var(--muted);opacity:.7}
+.inp .u{font:500 12px var(--mono);color:var(--muted);padding:0 9px;text-transform:none;letter-spacing:0;white-space:nowrap}
+textarea{width:100%;min-height:64px;resize:vertical;border:1px solid var(--line);border-radius:4px;background:var(--bg);padding:8px 9px;font-size:.97em}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px dashed var(--line);background:transparent;border-radius:3px;padding:5px 9px;font-size:13px}
+.chip[aria-pressed="true"]{border-style:solid;border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.chip.warn[aria-pressed="true"]{background:var(--flag);border-color:var(--flag);color:#fff}
+.calc{font:500 13px/1.6 var(--mono);background:var(--bg);border-left:3px solid var(--tape);padding:8px 10px;font-variant-numeric:tabular-nums}
+.calc b{font-weight:600}
+.calc .big{display:block;font-family:var(--display);font-stretch:80%;font-weight:800;font-size:26px;line-height:1.1;margin-bottom:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.abtn{border:1px solid var(--line);background:transparent;border-radius:4px;padding:6px 10px;font-size:13px;font-weight:500;display:inline-flex;gap:6px;align-items:center}
+.abtn[aria-pressed="true"].flagb{border-color:var(--flag);color:var(--flag);font-weight:600}
+.photos{display:flex;gap:8px;flex-wrap:wrap}
+.ph{position:relative;width:76px;height:76px;border-radius:3px;overflow:hidden;border:1px solid var(--line)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph button{position:absolute;top:2px;right:2px;width:22px;height:22px;border:0;border-radius:2px;background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:1;padding:0}
+input[type=file]{display:none}
+
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--paper);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.bar .wrap{display:flex;gap:8px;padding-block:10px}
+.bbtn{flex:1;border:1px solid var(--ink);background:transparent;border-radius:4px;padding:10px 6px;font-family:var(--display);font-stretch:80%;font-weight:700;text-transform:uppercase;font-size:14px;letter-spacing:.03em;white-space:nowrap}
+.bbtn.pri{background:var(--tape);color:var(--tape-ink);border-color:var(--tape)}
+
+.scrim{position:fixed;inset:0;background:rgba(10,12,11,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--paper);width:100%;max-width:760px;max-height:90vh;overflow:auto;border-radius:8px 8px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+.sheet h3{margin:0;font-family:var(--display);font-stretch:75%;font-weight:800;font-size:22px;text-transform:uppercase}
+.sheet h4{margin:8px 0 0;font:600 11.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.sheet p{margin:0;color:var(--muted);font-size:14px}
+.sheet pre{margin:0;white-space:pre-wrap;word-break:break-word;font:13px/1.5 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:12px;max-height:46vh;overflow:auto}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;align-self:flex-start;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:6px 12px;font-size:13px;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tin{border:1px solid var(--line);background:var(--bg);border-radius:4px;padding:8px 9px;min-width:0;width:100%}
+.vlist{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.vrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.vrow .pc{font:500 12px var(--mono);color:var(--muted)}
+.danger{color:var(--flag);border-color:var(--flag)}
+.toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:4px;font-size:13.5px;z-index:30;white-space:nowrap}
+.sample{font:500 11px var(--mono);color:var(--muted);border:1px dashed var(--line);padding:1px 6px;border-radius:3px;margin-left:6px;vertical-align:middle;text-transform:none}
+
+/* settings */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.swrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0}
+.sw{width:42px;height:24px;border-radius:12px;border:1px solid var(--line);background:var(--bg);position:relative;padding:0;flex:0 0 auto}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:transform .15s}
+.sw[aria-pressed="true"]{background:var(--tape);border-color:var(--tape)}
+.sw[aria-pressed="true"]::after{transform:translateX(18px);background:var(--tape-ink)}
+.ck{border:1px solid var(--line);border-radius:4px}
+.ck .sh{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);font-weight:600;font-size:14px}
+.ck .sh .mv{display:flex;gap:4px}
+.ck .sh .mv button{width:30px;height:28px;border:1px solid var(--line);background:var(--paper);border-radius:3px;padding:0}
+.ck .ir{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;border-top:1px solid var(--line);font-size:13.5px}
+.ck .ir span{min-width:0}
+.ck .ir.off span{color:var(--muted);text-decoration:line-through}
+.cklist{display:flex;flex-direction:column;gap:8px}
+
+/* compare */
+.tblw{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table.cmp{border-collapse:collapse;width:100%;min-width:420px;font-size:13.5px}
+.cmp th,.cmp td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.cmp thead th{background:var(--bg);font-family:var(--display);font-stretch:80%;font-weight:700;font-size:14px;line-height:1.2}
+.cmp thead th small{display:block;font:500 11px var(--mono);color:var(--muted)}
+.cmp tbody th{font-weight:500;color:var(--muted);font-size:12.5px;white-space:nowrap}
+.cmp td{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px}
+.cmp td.best{background:var(--tape-soft);font-weight:600}
+.cmp tr:last-child th,.cmp tr:last-child td{border-bottom:0}
+
+/* sample reels */
+.reelcards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px}
+.rcard{position:relative;text-align:left;border:1px solid var(--ink);background:var(--paper);border-radius:4px;padding:16px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.rcard::before,.rcard::after{content:"";position:absolute;left:6px;right:6px;height:5px;background-image:repeating-linear-gradient(90deg,var(--ink) 0 6px,transparent 6px 12px);opacity:.75}
+.rcard::before{top:4px}.rcard::after{bottom:4px}
+.rcard .k{font:500 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rcard strong{font-family:var(--display);font-stretch:78%;font-weight:800;font-size:20px;text-transform:uppercase;line-height:1.05}
+.rcard .p{font:500 12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.rcard .p b{color:var(--ink)}
+.reelgrid{display:grid;gap:16px;align-items:start}
+@media (min-width:640px){.reelgrid{grid-template-columns:auto minmax(0,1fr)}}
+.reel{position:relative;aspect-ratio:9/16;height:min(56vh,500px);max-width:100%;margin:0 auto;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--paper)}
+.reel canvas{width:100%;height:100%;display:block}
+.segs{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:3px}
+.segs i{display:block;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.segs i b{display:block;height:100%;width:0;background:var(--ink)}
+.rno{position:absolute;top:18px;left:10px;font:600 11px var(--mono);color:var(--ink);background:var(--paper);padding:1px 5px;border-radius:2px}
+.rmove{position:absolute;top:18px;right:10px;font:600 11px var(--mono);color:var(--tape-ink);background:var(--tape);padding:1px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:.05em}
+.rph{position:absolute;left:0;right:0;bottom:62px;text-align:center;font-family:var(--display);font-stretch:85%;font-weight:800;font-size:17px;color:var(--tape);letter-spacing:.04em;text-shadow:0 1px 0 var(--ink),0 0 6px var(--paper)}
+.rcap{position:absolute;left:8px;right:8px;bottom:8px;background:var(--ink);color:var(--paper);border-radius:3px;padding:6px 9px}
+.rcap b{display:block;font-weight:600;font-size:13.5px;line-height:1.25}
+.rcap span{font:500 11px var(--mono);opacity:.8}
+.rctl{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.rctl button{width:46px;height:40px;border:1px solid var(--line);background:var(--paper);border-radius:4px;display:grid;place-items:center;padding:0}
+.rctl button.pp{width:64px;background:var(--tape);border-color:var(--tape);color:var(--tape-ink)}
+.rctl svg{width:18px;height:18px}
+.shots{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);display:flex;flex-direction:column}
+.shots li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start;padding:9px 4px 9px 6px;border-bottom:1px solid var(--line);border-left:3px solid transparent}
+.shots li.on{border-left-color:var(--tape);background:var(--bg)}
+.shots .box{width:24px;height:24px}
+.shots li.done .box{background:var(--ink)}.shots li.done .box svg{opacity:1;stroke:var(--paper)}
+.shots .sj{border:0;background:none;padding:0;text-align:left;min-width:0}
+.shots .sj strong{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:600}
+.shots .sj strong em{font:500 11.5px var(--mono);font-style:normal;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.shots .sj span{display:block;font-size:13px;color:var(--muted);margin-top:1px}
+.rfmt{font:500 12px var(--mono);color:var(--muted);border:1px dashed var(--line);border-radius:4px;padding:8px 10px}
+@media (max-width:440px){.panel{padding-left:4px}.brand small{display:none}.brand{font-size:19px}.bbtn{font-size:13px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="hrow">
+      <div class="brand">Showroom Walk<small>GALLERY INSPECTION LOG</small></div>
+      <div class="visit">
+        <select id="visitSel" aria-label="Current visit"></select>
+        <button class="ibtn" id="visitsBtn">Visits</button>
+        <button class="ibtn" id="setBtn" aria-label="Settings"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 5h9M15 5h2M3 10h3M9 10h8M3 15h7M13 15h4"/><circle cx="13.5" cy="5" r="1.6"/><circle cx="7.5" cy="10" r="1.6"/><circle cx="11.5" cy="15" r="1.6"/></svg></button>
+      </div>
+    </div>
+    <div class="tape" aria-hidden="true"><div class="fill" id="tapeFill"></div><div class="ticks"></div><div class="read" id="tapeRead"></div></div>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+    <div class="types" id="types"></div>
+  </div>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<div class="bar"><div class="wrap">
+  <button class="bbtn" id="flagsBtn">Red flags</button>
+  <button class="bbtn" id="cmpBtn">Compare</button>
+  <button class="bbtn pri" id="summaryBtn">Summary</button>
+</div></div>
+
+<div id="sheetHost"></div>
+<input type="file" id="fileIn" accept="image/*" multiple>
+
+<script>
+"use strict";
+/* per:true = stored separately for each unit type */
+const SECTIONS=[
+ {id:"unit",short:"Show unit",title:"Show unit vs bare unit",intro:"Separate the interior-design styling from what the buyer actually gets at handover.",items:[
+  {id:"partitions",per:1,t:"Non-structural partitions & removed walls",h:"Bedroom walls knocked out? Study turned into open lounge?",f:[{k:"note",type:"text",l:"What was altered"}]},
+  {id:"glass",per:1,t:"Glass dividers & oversized mirrors",h:"Spot anything that makes the space read bigger than it is.",f:[]},
+  {id:"ceiling",per:1,t:"Floor-to-ceiling heights",h:"Ask for bare-unit height, not the plastered show-unit figure.",f:[{k:"show",type:"num",l:"Show unit",dim:"len"},{k:"bare",type:"num",l:"Bare unit",dim:"len"}],calc:"ceiling"},
+  {id:"beams",per:1,t:"Down-hung beams & AC trunking",h:"Where do beams drop? Is ducting hidden in a bulkhead that won't be built?",f:[{k:"note",type:"text",l:"Locations"}]},
+  {id:"floor",t:"Flooring spec (Schedule G/H)",h:"Material and tile size per area.",f:[{k:"type",type:"sel",l:"Material",o:["Porcelain tile","Homogeneous tile","Engineered timber","Vinyl / SPC","Marble"]},{k:"size",type:"sel",l:"Tile size",o:["600×600","600×1200","800×800","900×900","Not tile"]}]},
+  {id:"bath",t:"Bathroom inclusions",h:"Sanitary brand, water heater, shower screen.",f:[{k:"brand",type:"text",l:"Sanitary brand"}],chips:["Water heater included","Shower screen included","Vanity cabinet included"]},
+  {id:"kitchen",t:"Kitchen inclusions",h:"Cabinets, hood & hob, sink, top material.",f:[{k:"top",type:"sel",l:"Countertop",o:["Quartz","Solid surface","Granite","Melamine","None"]}],chips:["Upper cabinet","Lower cabinet","Hood","Hob","Sink","Oven"]},
+  {id:"clear",per:1,t:"Bed & wardrobe clearances",h:"Queen/king circulation space, wardrobe doors vs bedside tables.",f:[{k:"mb",type:"sel",l:"Master fits",o:["King, comfortable","King, tight","Queen only","Queen, tight"]}],chips:["Wardrobe door hits bedside","Door swing blocks bed"],warn:true},
+ ]},
+ {id:"model",short:"Model & plan",title:"Scale model & master plan",intro:"Use the physical model for orientation, surroundings and building logistics.",items:[
+  {id:"orient",per:1,t:"Sun & wind orientation",h:"North–South facing avoids the harsh afternoon West sun.",f:[{k:"face",type:"sel",l:"Unit faces",o:["North","South","East","West","NE","NW","SE","SW"]}]},
+  {id:"views",per:1,t:"View obstructions",h:"Tick everything this unit type faces.",f:[],chips:["Empty land (future phase)","Highway","Elevated MRT/LRT","Oxidation pond / STP","TNB substation","Another tower close by","Cemetery"],warn:true},
+  {id:"phases",t:"Future phases",h:"What gets built next to or in front of this block, and when?",f:[{k:"note",type:"text",l:"Phase notes"}]},
+  {id:"lifts",t:"Block & lift logistics",h:"Units per floor vs lifts.",f:[{k:"upf",type:"num",l:"Units / floor"},{k:"pl",type:"num",l:"Passenger lifts"},{k:"sl",type:"num",l:"Service lifts"}],calc:"lifts"},
+  {id:"refuse",per:1,t:"Distance to lift lobby & refuse chamber",h:"Units next to the chute get smell and noise.",f:[],chips:["Next to lift lobby","Next to refuse chamber","End of corridor"],warn:true},
+  {id:"podium",t:"Car park podium",h:"Parking levels, ramp style, walk to lobby.",f:[{k:"lv",type:"text",l:"Parking levels"},{k:"ramp",type:"sel",l:"Ramp",o:["Speed ramp","Circular ramp","Mixed"]},{k:"walk",type:"num",l:"Bay → lobby",u:"m"}]},
+ ]},
+ {id:"deal",short:"Package",title:"Package, legal & operations",intro:"Get the real cost structure from the sales PIC, in writing where possible.",items:[
+  {id:"price",per:1,t:"Pricing & rebates",h:"Gross price, rebates, booking fee for this unit type.",f:[{k:"gross",type:"num",l:"Gross price",u:"RM"},{k:"rebate",type:"num",l:"Rebate / early bird",u:"RM"},{k:"size",type:"num",l:"Built-up",dim:"area"},{k:"book",type:"num",l:"Booking fee",u:"RM"}],calc:"price"},
+  {id:"loan",per:1,t:"Loan calculator",h:"Instalment and income needed on the net nett price. Blank fields use your defaults.",f:[{k:"margin",type:"num",l:"Margin",u:"%",ph:"margin"},{k:"rate",type:"num",l:"Interest",u:"% p.a.",ph:"rate"},{k:"tenure",type:"num",l:"Tenure",u:"yrs",ph:"tenure"}],calc:"loan"},
+  {id:"refund",t:"Booking fee refund policy",h:"Refundable if loan rejected? Within how many days?",f:[{k:"note",type:"text",l:"Policy"}]},
+  {id:"incent",t:"Financing & incentives",h:"Tick what the developer absorbs.",f:[],chips:["Free SPA legal fee","Free loan legal fee","Stamp duty absorbed","MOT covered","Cash back","Free furniture package"]},
+  {id:"maint",t:"Maintenance fees",h:"Service charge per area. Sinking fund left blank uses your default %.",f:[{k:"rate",type:"num",l:"Service charge",dim:"rate"},{k:"sink",type:"num",l:"Sinking fund",dim:"rate",ph:"sink"}],calc:"maint"},
+  {id:"mixed",t:"Mixed-development billing",h:"Are commercial and residential billed separately?",f:[{k:"note",type:"text",l:"Billing structure"}]},
+  {id:"vp",t:"Project milestones",h:"VP date and current construction stage.",f:[{k:"vp",type:"text",l:"Expected VP"},{k:"stage",type:"sel",l:"Stage",o:["Not started","Piling","Sub-structure","Superstructure","Topped out","Finishing","CCC / VP"]},{k:"lvl",type:"num",l:"Level reached"}]},
+ ]},
+ {id:"kit",short:"Content kit",title:"Marketing & content kit",intro:"Shot list for listings and remote clients. Steady pans, 10–15 s each.",items:[
+  {id:"foyer",t:"B-roll: entrance foyer",h:"Slow pan in from the door.",f:[]},
+  {id:"kshot",t:"B-roll: kitchen handover area",h:"Show what's included, not the ID add-ons.",f:[]},
+  {id:"mbr",per:1,t:"B-roll: master bedroom",h:"Wide from the doorway, then window light.",f:[]},
+  {id:"balc",per:1,t:"B-roll: balcony & view lines",h:"Pan left to right across the view.",f:[]},
+  {id:"mlay",per:1,t:"Model close-up: unit layout",h:"Zoom into this type's stack on the model.",f:[]},
+  {id:"fac",t:"Model close-up: facilities deck",h:"Tick each facility filmed.",f:[],chips:["Infinity pool","Gym","Co-working","Kids' play","Sky lounge","BBQ deck"]},
+  {id:"light",t:"Daylight by stack",h:"Which stack gets the best natural light, and when?",f:[{k:"best",type:"text",l:"Best stack / time"}]},
+ ]},
+];
+const DEFAULT_CFG={name:"Mirzan",phone:"012-594 0693",agency:"",ren:"",lang:"mix",emoji:true,area:"sqft",len:"mm",
+  sinkPct:10,margin:90,rate:4.2,tenure:35,dsr:60,liftWarn:8,theme:"auto",big:false,backupRemind:true,
+  order:["unit","model","deal","kit"],hidden:[],custom:[]};
+
+const KEY="showroom-walk-v1";
+let S={visits:[],cur:null,tab:"unit",filter:"all",cfg:{},lastBackup:0};
+let openItem=null,cmpSel=null;
+const C=()=>S.cfg;
+
+function uid(){return Math.random().toString(36).slice(2,9)}
+function newType(name){return {id:uid(),name,items:{}}}
+function blankVisit(name){const t=newType("Type A");return {id:uid(),name:name||"New visit",date:new Date().toISOString().slice(0,10),items:{},types:[t],curType:t.id}}
+function samples(){
+  const a=blankVisit("Sample · Gamuda Cove");a.sample=true;
+  a.types[0].name="Type A";
+  const b=newType("Type B");a.types.push(b);
+  Object.assign(a.items,{floor:{done:true,v:{type:"Porcelain tile",size:"600×600"}},kitchen:{done:true,chips:["Lower cabinet","Hood","Hob","Sink"],v:{top:"Quartz"}},
+    maint:{done:true,v:{rate:"0.32"}},incent:{done:true,chips:["Free SPA legal fee","Free loan legal fee"]},lifts:{done:true,v:{upf:"12",pl:"3",sl:"1"}},vp:{v:{stage:"Superstructure",lvl:"18",vp:"Q4 2028"}}});
+  Object.assign(a.types[0].items,{partitions:{done:true,flag:true,v:{note:"Study wall removed to open up living"}},ceiling:{done:true,v:{show:"2750",bare:"3000"}},
+    orient:{done:true,v:{face:"North"}},views:{done:true,flag:true,chips:["Empty land (future phase)"]},price:{done:true,v:{gross:"498000",rebate:"49800",size:"850",book:"2000"}}});
+  Object.assign(b.items,{orient:{done:true,v:{face:"West"}},price:{done:true,v:{gross:"628000",rebate:"62800",size:"1100",book:"2000"}}});
+  const c=blankVisit("Sample · Eco Grandeur");c.sample=true;c.types[0].name="Type C";
+  Object.assign(c.items,{maint:{v:{rate:"0.28"}},lifts:{v:{upf:"10",pl:"4"}},vp:{v:{stage:"Piling",vp:"2029"}}});
+  Object.assign(c.types[0].items,{orient:{done:true,v:{face:"South"}},price:{done:true,v:{gross:"545000",rebate:"27250",size:"980",book:"1000"}}});
+  return [a,c];
+}
+const PER_IDS=new Set(SECTIONS.flatMap(s=>s.items).filter(i=>i.per).map(i=>i.id));
+function migrate(v){
+  if(!v.types){const t=newType("Type A");Object.keys(v.items||{}).forEach(id=>{if(PER_IDS.has(id)){t.items[id]=v.items[id];delete v.items[id]}});v.types=[t];v.curType=t.id}
+  if(!v.types.find(t=>t.id===v.curType))v.curType=v.types[0].id;
+}
+function load(){
+  try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);if(d&&d.visits&&d.visits.length){S=Object.assign(S,d)}}}catch(e){}
+  normalize();
+}
+function normalize(){
+  S.cfg=Object.assign({},DEFAULT_CFG,S.cfg||{});
+  ["unit","model","deal","kit"].forEach(id=>{if(!S.cfg.order.includes(id))S.cfg.order.push(id)});
+  if(!S.visits.length){S.visits=samples();S.cur=S.visits[0].id}
+  S.visits.forEach(migrate);
+  if(!S.visits.find(v=>v.id===S.cur))S.cur=S.visits[0].id;
+}
+let saveWarned=false;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){if(!saveWarned){toast("Storage full. Remove some photos or old visits.");saveWarned=true}}}
+
+const visit=()=>S.visits.find(v=>v.id===S.cur)||S.visits[0];
+const typeOf=v=>v.types.find(t=>t.id===v.curType)||v.types[0];
+function allDefs(){return SECTIONS.flatMap(s=>s.items).concat(C().custom.map(c=>({id:c.id,t:c.t,h:c.h||"",f:[],chips:c.chips&&c.chips.length?c.chips:null,per:c.per,sec:c.sec,custom:1})))}
+const defOf=id=>allDefs().find(d=>d.id===id)||{};
+function storeFor(v,t,id){return defOf(id).per?t.items:v.items}
+function peekIn(v,t,id){return storeFor(v,t,id)[id]||{}}
+const peek=id=>{const v=visit();return peekIn(v,typeOf(v),id)};
+function rec(id){const v=visit(),st=storeFor(v,typeOf(v),id);return st[id]||(st[id]={})}
+function secById(id){return SECTIONS.find(s=>s.id===id)}
+function sectionItems(sec){return sec.items.concat(C().custom.filter(c=>c.sec===sec.id).map(c=>defOf(c.id))).filter(i=>!C().hidden.includes(i.id))}
+const orderedSecs=()=>C().order.map(secById).filter(Boolean);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num=x=>{const n=parseFloat(String(x==null?"":x).replace(/,/g,""));return isNaN(n)?null:n};
+const rm=n=>"RM "+Math.round(n).toLocaleString("en-MY");
+
+/* ---------- units ---------- */
+const SQM=10.7639;
+function unitLabel(dim){if(dim==="len")return C().len==="ft"?"ft":"mm";if(dim==="area")return C().area==="sqm"?"sq m":"sq ft";if(dim==="rate")return C().area==="sqm"?"RM/psm":"RM/psf";return ""}
+function toDisp(dim,raw){const n=num(raw);if(n==null)return raw||"";
+  if(dim==="len"&&C().len==="ft")return String(+(n/304.8).toFixed(2));
+  if(dim==="area"&&C().area==="sqm")return String(+(n/SQM).toFixed(1));
+  if(dim==="rate"&&C().area==="sqm")return String(+(n*SQM).toFixed(3));
+  return raw}
+function fromDisp(dim,s){const n=num(s);if(n==null)return s;
+  if(dim==="len"&&C().len==="ft")return String(+(n*304.8).toFixed(1));
+  if(dim==="area"&&C().area==="sqm")return String(+(n*SQM).toFixed(1));
+  if(dim==="rate"&&C().area==="sqm")return String(+(n/SQM).toFixed(5));
+  return s}
+const fmtArea=sqft=>C().area==="sqm"?`${(sqft/SQM).toFixed(1)} sq m`:`${Math.round(sqft).toLocaleString()} sq ft`;
+const fmtPer=perSqft=>C().area==="sqm"?`RM ${Math.round(perSqft*SQM).toLocaleString()} psm`:`RM ${Math.round(perSqft).toLocaleString()} psf`;
+const fmtLen=mm=>C().len==="ft"?`${(mm/304.8).toFixed(2)} ft`:`${Math.round(mm)} mm`;
+
+/* ---------- numbers for one visit + unit type ---------- */
+function metrics(v,t){
+  const g=(id,k)=>num(((peekIn(v,t,id).v)||{})[k]);
+  const s=(id,k)=>((peekIn(v,t,id).v)||{})[k]||"";
+  const m={};
+  m.gross=g("price","gross");m.rebate=g("price","rebate")||0;m.size=g("price","size");m.book=g("price","book");
+  m.net=m.gross!=null?m.gross-m.rebate:null;
+  m.psf=m.net!=null&&m.size?m.net/m.size:null;
+  m.rate=g("maint","rate");m.sinkSet=g("maint","sink")!=null;
+  m.sink=m.sinkSet?g("maint","sink"):(m.rate!=null?m.rate*C().sinkPct/100:null);
+  m.maintPsf=m.rate!=null?m.rate+(m.sink||0):null;
+  m.maintMonthly=m.maintPsf!=null&&m.size?m.maintPsf*m.size:null;
+  m.margin=g("loan","margin")??C().margin;m.ir=g("loan","rate")??C().rate;m.tenure=g("loan","tenure")??C().tenure;
+  if(m.net!=null){m.loanAmt=m.net*m.margin/100;const r=m.ir/1200,n=m.tenure*12;m.monthly=r?m.loanAmt*r/(1-Math.pow(1+r,-n)):m.loanAmt/n;m.income=m.monthly/(C().dsr/100);m.down=m.net-m.loanAmt}
+  m.face=s("orient","face");m.stage=s("vp","stage");m.lvl=s("vp","lvl");m.vp=s("vp","vp");
+  m.upf=g("lifts","upf");m.pl=g("lifts","pl");m.perLift=m.upf&&m.pl?m.upf/m.pl:null;
+  let fl=0,dn=0,tot=0;orderedSecs().forEach(sec=>sectionItems(sec).forEach(it=>{const r=peekIn(v,t,it.id);tot++;if(r.done)dn++;if(r.flag)fl++}));
+  m.flags=fl;m.done=dn;m.total=tot;
+  return m;
+}
+
+function calcText(kind){
+  const v=visit(),t=typeOf(v),m=metrics(v,t),g=(id,k)=>num((peek(id).v||{})[k]);
+  if(kind==="ceiling"){const s=g("ceiling","show"),b=g("ceiling","bare");if(s&&b)return `Plaster ceiling takes <b>${fmtLen(b-s)}</b> off the bare height.`}
+  if(kind==="lifts"&&m.perLift)return `<b>${m.perLift.toFixed(1)}</b> units per passenger lift on each floor${m.perLift>C().liftWarn?" · expect queues at peak hours":""}.`;
+  if(kind==="price"&&m.net!=null){let x=`Net nett <b>${rm(m.net)}</b>`;if(m.rebate&&m.gross)x+=` · ${(m.rebate/m.gross*100).toFixed(1)}% off`;if(m.psf)x+=` · <b>${fmtPer(m.psf)}</b>`;return x}
+  if(kind==="maint"&&m.maintPsf!=null){const per=C().area==="sqm"?`RM ${(m.maintPsf*SQM).toFixed(2)} psm`:`RM ${m.maintPsf.toFixed(3)} psf`;
+    return m.maintMonthly?`<b>${rm(m.maintMonthly)}</b> / month for ${fmtArea(m.size)} (${per} incl. sinking fund${m.sinkSet?"":" at "+C().sinkPct+"%"})`:`${per} incl. sinking fund · add built-up under Pricing for the monthly figure`}
+  if(kind==="loan"){if(m.net==null)return "Enter the gross price under Pricing & rebates first.";
+    return `<span class="big">${rm(m.monthly)}<small style="font-size:14px;font-weight:600"> /month</small></span>Loan ${rm(m.loanAmt)} (${m.margin}%) · ${m.ir}% · ${m.tenure} yrs<br>Downpayment <b>${rm(m.down)}</b> · income needed ≈ <b>${rm(m.income)}</b> at ${C().dsr}% DSR`}
+  return "";
+}
+
+/* ---------- render ---------- */
+const $=s=>document.querySelector(s);
+const tick='<svg viewBox="0 0 16 16" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+function secProgress(sec){const its=sectionItems(sec);return [its.filter(i=>peek(i.id).done).length,its.length]}
+function applyDisplay(){
+  const r=document.documentElement;
+  if(C().theme==="auto"){if(hostTheme)r.setAttribute("data-theme",hostTheme);else r.removeAttribute("data-theme")}else r.setAttribute("data-theme",C().theme);
+  r.classList.toggle("big",!!C().big);
+}
+function renderHeader(){
+  $("#visitSel").innerHTML=S.visits.map(v=>`<option value="${v.id}" ${v.id===S.cur?"selected":""}>${esc(v.name)}</option>`).join("");
+  const v=visit(),m=metrics(v,typeOf(v));
+  $("#tapeFill").style.width=(m.total?m.done/m.total*100:0)+"%";
+  $("#tapeRead").innerHTML=`<b>${m.done}</b>/${m.total} checked`;
+  if(!C().order.includes(S.tab))S.tab=C().order[0];
+  $("#tabs").innerHTML=orderedSecs().map(s=>{const [a,b]=secProgress(s);return `<button class="tab" role="tab" aria-selected="${s.id===S.tab}" data-tab="${s.id}">${esc(s.short)}<span class="ct">${a}/${b}</span></button>`}).join("");
+  $("#types").innerHTML=`<span class="lbl">Unit type</span>${v.types.map(t=>`<button class="tchip" data-type="${t.id}" aria-pressed="${t.id===v.curType}">${esc(t.name)}${t.id===v.curType?' <span aria-hidden="true">✎</span>':""}</button>`).join("")}<button class="tchip add" data-type="+">+ Type</button>`;
+}
+function fieldHTML(it,f){
+  const raw=(peek(it.id).v||{})[f.k]||"",val=f.dim?toDisp(f.dim,raw):raw,id=`f_${it.id}_${f.k}`;
+  let ph="";if(f.ph==="margin")ph=C().margin;if(f.ph==="rate")ph=C().rate;if(f.ph==="tenure")ph=C().tenure;if(f.ph==="sink")ph="auto "+C().sinkPct+"%";
+  let ctl;
+  if(f.type==="sel")ctl=`<select id="${id}" data-item="${it.id}" data-k="${f.k}"><option value="">—</option>${f.o.map(o=>`<option ${o===val?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
+  else{const u=f.dim?unitLabel(f.dim):f.u;ctl=`<input id="${id}" data-item="${it.id}" data-k="${f.k}" ${f.dim?`data-dim="${f.dim}"`:""} value="${esc(val)}" placeholder="${esc(ph)}" ${f.type==="num"?'inputmode="decimal"':""} autocomplete="off">${u?`<span class="u">${u}</span>`:""}`}
+  return `<label class="f" for="${id}">${esc(f.l)}<span class="inp">${ctl}</span></label>`;
+}
+function itemHTML(it){
+  const r=peek(it.id),isOpen=openItem===it.id,v=visit();
+  const photos=(r.photos||[]).length,hasNote=!!(r.note&&r.note.trim());
+  const typeTag=it.per&&v.types.length>1?`<span class="mk ty">${esc(typeOf(v).name)}</span>`:"";
+  let h=`<div class="item ${r.done?"done":""} ${isOpen?"open":""}" data-id="${it.id}">
+   <div class="irow">
+    <button class="box" data-act="done" aria-label="Mark ${esc(it.t)} checked" aria-pressed="${!!r.done}">${tick}</button>
+    <button class="ititle" data-act="open" aria-expanded="${isOpen}"><strong>${esc(it.t)}</strong>${it.h?`<span>${esc(it.h)}</span>`:""}</button>
+    <div class="meta">${typeTag}${r.flag?'<span class="mk fl">FLAG</span>':""}${photos?`<span class="mk">${photos} img</span>`:""}${hasNote?'<span class="mk">note</span>':""}</div>
+   </div>`;
+  if(isOpen){
+    h+=`<div class="panel">`;
+    if(it.f&&it.f.length)h+=`<div class="fields">${it.f.map(f=>fieldHTML(it,f)).join("")}</div>`;
+    if(it.chips)h+=`<div class="chips">${it.chips.map(c=>`<button class="chip ${it.warn?"warn":""}" data-act="chip" data-c="${esc(c)}" aria-pressed="${(r.chips||[]).includes(c)}">${esc(c)}</button>`).join("")}</div>`;
+    if(it.calc){const c=calcText(it.calc);h+=`<div class="calc" data-calc="${it.calc}" ${c?"":"hidden"}>${c}</div>`}
+    h+=`<textarea id="n_${it.id}" data-note="${it.id}" placeholder="Notes for this item">${esc(r.note||"")}</textarea>`;
+    if(photos)h+=`<div class="photos">${r.photos.map((p,i)=>`<div class="ph"><img src="${p}" alt="Photo ${i+1}"><button data-act="rmph" data-i="${i}" aria-label="Remove photo">×</button></div>`).join("")}</div>`;
+    h+=`<div class="actions"><button class="abtn" data-act="photo">+ Photo</button><button class="abtn flagb" data-act="flag" aria-pressed="${!!r.flag}">${r.flag?"Flagged":"Flag concern"}</button></div></div>`;
+  }
+  return h+`</div>`;
+}
+function backupBanner(){
+  if(!C().backupRemind)return "";
+  const real=S.visits.some(v=>!v.sample);if(!real)return "";
+  const days=S.lastBackup?Math.floor((Date.now()-S.lastBackup)/864e5):null;
+  if(days!=null&&days<7)return "";
+  return `<div class="banner"><span>${days==null?"You haven't backed up your visits yet.":`Last backup ${days} days ago.`}</span><button class="abtn" id="bkNow">Back up now</button></div>`;
+}
+function renderMain(){
+  const secs=orderedSecs(),si=secs.findIndex(s=>s.id===S.tab),sec=secs[si];
+  let items=sectionItems(sec);
+  if(S.filter==="todo")items=items.filter(i=>!peek(i.id).done);
+  if(S.filter==="flag")items=items.filter(i=>peek(i.id).flag);
+  const v=visit();
+  $("#main").innerHTML=`${backupBanner()}
+   <div class="sechead"><span class="secno">${si+1}/${secs.length}</span><h2>${esc(sec.title)}${v.sample&&si===0?'<span class="sample">example data</span>':""}</h2><p>${esc(sec.intro)}</p></div>
+   ${sec.id==="kit"?reelCardsHTML():""}
+   <div class="tools">${[["all","All"],["todo","Not checked"],["flag","Flagged"]].map(([k,l])=>`<button class="chipf" data-filter="${k}" aria-pressed="${S.filter===k}">${l}</button>`).join("")}</div>
+   <div class="list">${items.map(itemHTML).join("")||`<p style="color:var(--muted);padding:16px 4px;margin:0">Nothing here for this filter.</p>`}</div>`;
+  const b=$("#bkNow");if(b)b.onclick=()=>openVisits(true);
+}
+function render(){applyDisplay();renderHeader();renderMain()}
+
+/* ---------- events ---------- */
+document.addEventListener("click",e=>{
+  if(e.target.closest("#sheetHost"))return;
+  const t=e.target.closest("[data-tab],[data-filter],[data-type],[data-act],[data-reel]");if(!t)return;
+  if(t.dataset.reel){openReel(t.dataset.reel);return}
+  if(t.dataset.tab){S.tab=t.dataset.tab;openItem=null;save();render();window.scrollTo(0,0);return}
+  if(t.dataset.filter){S.filter=t.dataset.filter;save();renderMain();return}
+  if(t.dataset.type){const v=visit();
+    if(t.dataset.type==="+"){const t2=newType("Type "+String.fromCharCode(65+v.types.length));v.types.push(t2);v.curType=t2.id;save();render();toast(t2.name+" added");return}
+    if(t.dataset.type===v.curType){openType();return}
+    v.curType=t.dataset.type;save();render();return}
+  const itemEl=t.closest(".item");if(!itemEl)return;const id=itemEl.dataset.id,act=t.dataset.act;
+  if(act==="open"){openItem=openItem===id?null:id;renderMain();return}
+  const r=rec(id);
+  if(act==="done")r.done=!r.done;
+  if(act==="flag")r.flag=!r.flag;
+  if(act==="chip"){r.chips=r.chips||[];const c=t.dataset.c;r.chips=r.chips.includes(c)?r.chips.filter(x=>x!==c):[...r.chips,c];if(defOf(id).warn&&r.chips.length)r.flag=true}
+  if(act==="photo"){pendingPhotoFor=id;$("#fileIn").click();return}
+  if(act==="rmph")r.photos.splice(+t.dataset.i,1);
+  save();render();
+});
+document.addEventListener("input",e=>{
+  const el=e.target;if(el.closest("#sheetHost"))return;
+  if(el.dataset.item){const r=rec(el.dataset.item);r.v=r.v||{};r.v[el.dataset.k]=el.dataset.dim?fromDisp(el.dataset.dim,el.value):el.value;save();
+    document.querySelectorAll("#main [data-calc]").forEach(c=>{const x=calcText(c.dataset.calc);c.innerHTML=x;c.hidden=!x})}
+  if(el.dataset.note){rec(el.dataset.note).note=el.value;save()}
+});
+document.addEventListener("change",e=>{if(e.target.dataset&&e.target.dataset.item&&!e.target.closest("#sheetHost"))renderHeader()});
+$("#visitSel").addEventListener("change",e=>{S.cur=e.target.value;openItem=null;save();render()});
+
+let pendingPhotoFor=null;
+$("#fileIn").addEventListener("change",async e=>{
+  const files=[...e.target.files];e.target.value="";if(!pendingPhotoFor)return;
+  const r=rec(pendingPhotoFor);r.photos=r.photos||[];
+  for(const f of files){try{r.photos.push(await shrink(f))}catch(err){toast("Couldn't read that image.")}}
+  save();render();
+});
+function shrink(file){return new Promise((res,rej)=>{const rd=new FileReader();rd.onerror=rej;rd.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{
+  const m=720,sc=Math.min(1,m/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.62))};im.src=rd.result};rd.readAsDataURL(file)})}
+
+/* ---------- sheets ---------- */
+function sheet(html,onMount){
+  const host=$("#sheetHost"),prevScroll=host.querySelector(".sheet")?host.querySelector(".sheet").scrollTop:0;
+  host.innerHTML=`<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  $("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim"||e.target.closest("[data-close]")){host.innerHTML="";render()}});
+  onMount&&onMount(host);
+  return prevScroll;
+}
+function closeSheet(){$("#sheetHost").innerHTML=""}
+function copy(text){
+  if(window.Android&&Android.copy){try{Android.copy(text);toast("Copied");return}catch(e){}}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(()=>toast("Copied"),()=>fallback())}else fallback();
+  function fallback(){const p=document.querySelector(".sheet pre,.sheet textarea");if(p){const rg=document.createRange();rg.selectNodeContents(p);const s=getSelection();s.removeAllRanges();s.addRange(rg)}toast("Select the text and copy it manually")}
+}
+function toast(m){const d=document.createElement("div");d.className="toast";d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2200)}
+
+/* unit type sheet */
+function openType(){
+  const v=visit(),t=typeOf(v);
+  sheet(`<h3>Unit type</h3><p>Items marked with the type tag (price, loan, facing, ceiling, views…) are saved separately for each type.</p>
+   <label class="f" for="tyName">Name<span class="inp"><input id="tyName" value="${esc(t.name)}" placeholder="e.g. Type B · 3R2B 1,100 sq ft"></span></label>
+   <div class="row"><button class="abtn" id="tyDup">Duplicate type</button><button class="abtn danger" id="tyDel" ${v.types.length<2?"disabled":""}>Delete type</button></div>
+   <button class="bbtn" data-close>Done</button>`,()=>{
+    $("#tyName").oninput=e=>{t.name=e.target.value||"Untitled";save();renderHeader()};
+    $("#tyDup").onclick=()=>{const c=JSON.parse(JSON.stringify(t));c.id=uid();c.name=t.name+" copy";v.types.push(c);v.curType=c.id;save();closeSheet();render();toast("Duplicated")};
+    $("#tyDel").onclick=e=>{const b=e.currentTarget;if(!b.dataset.armed){b.dataset.armed=1;b.textContent="Tap again to delete";return}
+      v.types=v.types.filter(x=>x.id!==t.id);v.curType=v.types[0].id;save();closeSheet();render();toast("Type deleted")};
+  });
+}
+
+/* summary text */
+const TX={
+ bm:{visit:"Lawatan galeri",price:"Harga",net:"net nett",book:"Yuran tempahan",pkg:"Pakej",maint:"Penyelenggaraan",mo:"/bulan",prog:"Status",lvl:"tingkat",face:"Menghadap",floor:"Lantai",kit:"Dapur",top:"top",bath:"Bilik air",ceil:"Tinggi siling (unit kosong)",upf:"unit setiap tingkat",lifts:"lif penumpang",fac:"Kemudahan",light:"Cahaya terbaik",loan:"Anggaran ansuran",loanOf:"pinjaman",yrs:"thn",inc:"Anggaran gaji diperlukan",down:"Deposit",cta:"Nak tengok video & gambar unit? Reply je, saya share."},
+ en:{visit:"Showroom visit",price:"Price",net:"net nett",book:"Booking fee",pkg:"Package",maint:"Maintenance",mo:"/month",prog:"Progress",lvl:"level",face:"Facing",floor:"Flooring",kit:"Kitchen",top:"top",bath:"Bathroom",ceil:"Ceiling height (bare)",upf:"units per floor",lifts:"passenger lifts",fac:"Facilities",light:"Best daylight",loan:"Est. instalment",loanOf:"loan",yrs:"yrs",inc:"Est. income needed",down:"Downpayment",cta:"Want the unit videos & photos? Just reply and I'll send them."},
+ mix:{visit:"Visit showroom",price:"Harga",net:"net nett",book:"Booking fee",pkg:"Package",maint:"Maintenance",mo:"/bulan",prog:"Progress",lvl:"level",face:"Facing",floor:"Lantai",kit:"Dapur",top:"top",bath:"Bilik air",ceil:"Ceiling height (bare)",upf:"unit/floor",lifts:"lif",fac:"Facilities",light:"Best natural light",loan:"Anggaran installment",loanOf:"loan",yrs:"thn",inc:"Anggaran gaji perlu",down:"Downpayment",cta:"Nak video & gambar unit? Reply je, I share."}
+};
+function clientSummary(){
+  const v=visit(),t=typeOf(v),m=metrics(v,t),T=TX[C().lang]||TX.mix,E=x=>C().emoji?x+" ":"",val=(id,k)=>((peekIn(v,t,id).v)||{})[k]||"",L=[];
+  L.push(`*${v.name}${v.types.length>1||t.name!=="Type A"?" · "+t.name:""}*`);L.push(`${T.visit} · ${v.date}`);L.push("");
+  if(m.gross!=null)L.push(`${E("💰")}${T.price}: ${rm(m.gross)}${m.rebate?` → ${T.net} ${rm(m.net)}`:""}${m.size?` (${fmtArea(m.size)}, ${fmtPer(m.psf)})`:""}`);
+  if(m.book)L.push(`${T.book}: ${rm(m.book)}`);
+  if(m.monthly)L.push(`${E("🏦")}${T.loan}: ${rm(m.monthly)}${T.mo} (${T.loanOf} ${m.margin}%, ${m.ir}%, ${m.tenure} ${T.yrs})`,`${T.down}: ${rm(m.down)} · ${T.inc}: ${rm(m.income)}`);
+  const inc=peekIn(v,t,"incent").chips||[];if(inc.length)L.push(`${T.pkg}: ${inc.join(", ")}`);
+  if(m.maintPsf!=null)L.push(`${T.maint}: ${C().area==="sqm"?"RM "+(m.maintPsf*SQM).toFixed(2)+" psm":"RM "+m.maintPsf.toFixed(2)+" psf"}${m.maintMonthly?` ≈ ${rm(m.maintMonthly)}${T.mo}`:""}`);
+  if(m.stage||m.vp)L.push(`${E("🏗")}${T.prog}: ${[m.stage,m.lvl&&(T.lvl+" "+m.lvl),m.vp&&("VP "+m.vp)].filter(Boolean).join(" · ")}`);
+  L.push("");
+  if(m.face)L.push(`${E("🧭")}${T.face} ${m.face}`);
+  const fl=[val("floor","type"),val("floor","size")].filter(x=>x&&x!=="Not tile").join(" ");if(fl)L.push(`${T.floor}: ${fl}`);
+  const kc=peekIn(v,t,"kitchen").chips||[];if(kc.length||val("kitchen","top"))L.push(`${T.kit}: ${[...kc,val("kitchen","top")&&val("kitchen","top")+" "+T.top].filter(Boolean).join(", ")}`);
+  const bc=[val("bath","brand"),...(peekIn(v,t,"bath").chips||[])].filter(Boolean);if(bc.length)L.push(`${T.bath}: ${bc.join(", ")}`);
+  if(num(val("ceiling","bare")))L.push(`${T.ceil}: ${fmtLen(num(val("ceiling","bare")))}`);
+  if(m.upf)L.push(`${m.upf} ${T.upf}, ${m.pl||"?"} ${T.lifts}`);
+  const fac=peekIn(v,t,"fac").chips||[];if(fac.length)L.push(`${E("🏊")}${T.fac}: ${fac.join(", ")}`);
+  if(val("light","best"))L.push(`${T.light}: ${val("light","best")}`);
+  L.push("");L.push(T.cta);
+  const c=C(),who=[c.name,c.agency].filter(Boolean).join(" · "),ph=[c.phone,c.ren&&("REN "+c.ren)].filter(Boolean).join(" · ");
+  if(who)L.push(who);if(ph)L.push(ph);
+  return L.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+}
+function flagsList(){
+  const v=visit(),L=[`${v.name}: concerns to raise`,""];let n=0;
+  orderedSecs().forEach(s=>sectionItems(s).forEach(it=>{
+    const scopes=it.per?v.types.map(t=>[t,peekIn(v,t,it.id)]):[[null,v.items[it.id]||{}]];
+    scopes.forEach(([t,r])=>{if(!r.flag)return;n++;
+      const extra=[...(it.warn?(r.chips||[]):[]),...Object.values(r.v||{}).filter(Boolean)].join(", ");
+      L.push(`• ${it.t}${t&&v.types.length>1?` [${t.name}]`:""}${extra?` (${extra})`:""}${r.note?`\n  ${r.note}`:""}`)})}));
+  if(!n)L.push("Nothing flagged yet. Use \"Flag concern\" on any item.");
+  return L.join("\n");
+}
+$("#summaryBtn").addEventListener("click",()=>{
+  const v=visit();
+  sheet(`<h3>Client summary</h3><p>For ${esc(typeOf(v).name)}. Ready to paste into WhatsApp. Only filled-in items appear; red flags stay out.</p>
+   ${v.types.length>1?`<div class="seg">${v.types.map(t=>`<button data-st="${t.id}" aria-pressed="${t.id===v.curType}">${esc(t.name)}</button>`).join("")}</div>`:""}
+   <pre id="sumTxt">${esc(clientSummary())}</pre><div class="row"><button class="bbtn pri" id="cp">Copy text</button>${window.Android&&Android.share?'<button class="bbtn" id="shr">Share</button>':""}<button class="bbtn" data-close>Close</button></div>`,
+   host=>{$("#cp").onclick=()=>copy(clientSummary());const sh=$("#shr");if(sh)sh.onclick=()=>Android.share(clientSummary());host.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{v.curType=b.dataset.st;save();renderHeader();$("#summaryBtn").click()})});
+});
+$("#flagsBtn").addEventListener("click",()=>{
+  sheet(`<h3>Red flags</h3><p>Your internal list of things to question the sales PIC about.</p><pre>${esc(flagsList())}</pre><div class="row"><button class="bbtn pri" id="cp">Copy list</button><button class="bbtn" data-close>Close</button></div>`,
+   ()=>$("#cp").onclick=()=>copy(flagsList()));
+});
+
+/* compare */
+function combos(){return S.visits.flatMap(v=>v.types.map(t=>({k:v.id+"|"+t.id,v,t})))}
+function openCompare(){
+  const all=combos();
+  if(!cmpSel||!cmpSel.every(k=>all.find(c=>c.k===k))){
+    const cur=visit();cmpSel=[cur.id+"|"+cur.curType];
+    all.forEach(c=>{if(cmpSel.length<3&&!cmpSel.includes(c.k)&&metrics(c.v,c.t).gross!=null)cmpSel.push(c.k)})}
+  const cols=cmpSel.map(k=>all.find(c=>c.k===k)).filter(Boolean).map(c=>({...c,m:metrics(c.v,c.t)}));
+  const area=C().area==="sqm"?"psm":"psf";
+  const rows=[
+    ["Net nett price",m=>m.net,rm,"low"],["Gross price",m=>m.gross,rm],["Built-up",m=>m.size,fmtArea],
+    ["Price per "+(C().area==="sqm"?"sq m":"sq ft"),m=>m.psf,fmtPer,"low"],["Monthly instalment",m=>m.monthly,rm,"low"],
+    ["Downpayment",m=>m.down,rm,"low"],["Income needed",m=>m.income,rm,"low"],["Maintenance / month",m=>m.maintMonthly,rm,"low"],
+    ["Booking fee",m=>m.book,rm],["Facing",m=>m.face],["Stage",m=>[m.stage,m.lvl&&("L"+m.lvl)].filter(Boolean).join(" · ")||null],
+    ["VP",m=>m.vp||null],["Units per lift",m=>m.perLift,x=>x.toFixed(1),"low"],["Red flags",m=>m.flags,String,"low"],["Checked",m=>m.total?m.done/m.total:null,x=>Math.round(x*100)+"%","high"]];
+  const body=rows.map(([lab,get,fmt,best])=>{
+    const vals=cols.map(c=>{const x=get(c.m);return x==null||x===""?null:x});
+    let bi=-1;if(best&&vals.filter(x=>typeof x==="number").length>1){const ns=vals.map(x=>typeof x==="number"?x:null);const target=best==="low"?Math.min(...ns.filter(x=>x!=null)):Math.max(...ns.filter(x=>x!=null));if(ns.filter(x=>x===target).length===1)bi=ns.indexOf(target)}
+    return `<tr><th scope="row">${esc(lab)}</th>${vals.map((x,i)=>`<td class="${i===bi?"best":""}">${x==null?"—":esc(fmt?fmt(x):x)}</td>`).join("")}</tr>`}).join("");
+  sheet(`<h3>Compare</h3><p>Pick up to 3 unit types from any visit. Highlighted cells are the better figure. Loan figures use each type's loan settings.</p>
+   <div class="chips">${all.map(c=>`<button class="chip" data-ck="${c.k}" aria-pressed="${cmpSel.includes(c.k)}">${esc(c.v.name.replace(/^Sample · /,""))} · ${esc(c.t.name)}</button>`).join("")}</div>
+   ${cols.length?`<div class="tblw"><table class="cmp"><thead><tr><th></th>${cols.map(c=>`<th>${esc(c.t.name)}<small>${esc(c.v.name.replace(/^Sample · /,""))}</small></th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`:`<p>Select at least one unit type.</p>`}
+   <div class="row"><button class="bbtn" id="cpCmp">Copy as text</button><button class="bbtn" data-close>Close</button></div>`,host=>{
+    host.querySelectorAll("[data-ck]").forEach(b=>b.onclick=()=>{const k=b.dataset.ck;if(cmpSel.includes(k))cmpSel=cmpSel.filter(x=>x!==k);else{cmpSel.push(k);if(cmpSel.length>3)cmpSel.shift()}openCompare()});
+    $("#cpCmp").onclick=()=>{const txt=rows.map(([lab,get,fmt])=>lab+": "+cols.map(c=>{const x=get(c.m);return x==null||x===""?"—":(fmt?fmt(x):x)}).join(" | ")).join("\n");
+      copy(cols.map(c=>c.v.name.replace(/^Sample · /,"")+" "+c.t.name).join(" vs ")+"\n\n"+txt)};
+  });
+}
+$("#cmpBtn").addEventListener("click",openCompare);
+
+/* visits */
+$("#visitsBtn").addEventListener("click",()=>openVisits(false));
+function openVisits(showBackup){
+  const rows=S.visits.map(v=>{const m=metrics(v,typeOf(v));return `<div class="vrow"><input class="tin" id="vn_${v.id}" data-vname="${v.id}" value="${esc(v.name)}" aria-label="Visit name"><span class="pc">${v.types.length} type${v.types.length>1?"s":""}</span><button class="abtn danger" data-vdel="${v.id}">Delete</button></div>`}).join("");
+  sheet(`<h3>Visits</h3><p>One visit per showroom. Everything stays on this device.</p>
+   <div class="row"><input class="tin" id="newName" placeholder="Project name, e.g. Eco Grandeur" style="flex:1"><button class="bbtn pri" id="addV" style="flex:0 0 auto">Add visit</button></div>
+   <div class="vlist">${rows}</div>
+   <h4>Backup</h4>
+   <div class="seg" role="group" aria-label="Backup"><button aria-pressed="false" id="bk">Backup</button><button aria-pressed="false" id="rs">Restore</button></div>
+   <div id="bkArea"></div>
+   <button class="bbtn" data-close>Done</button>`,host=>{
+    $("#addV").onclick=()=>{const n=$("#newName").value.trim();const v=blankVisit(n||"Visit "+(S.visits.length+1));S.visits.push(v);S.cur=v.id;openItem=null;save();render();openVisits()};
+    host.querySelectorAll("[data-vname]").forEach(i=>i.oninput=()=>{const v=S.visits.find(x=>x.id===i.dataset.vname);v.name=i.value;save();renderHeader()});
+    host.querySelectorAll("[data-vdel]").forEach(b=>b.onclick=()=>{
+      if(b.dataset.armed){S.visits=S.visits.filter(v=>v.id!==b.dataset.vdel);if(!S.visits.length)S.visits=[blankVisit("Visit 1")];if(!S.visits.find(v=>v.id===S.cur))S.cur=S.visits[0].id;save();render();openVisits()}
+      else{b.dataset.armed=1;b.textContent="Tap to confirm"}});
+    const doBk=()=>{const t=JSON.stringify(S);S.lastBackup=Date.now();save();$("#bkArea").innerHTML=`<p>Copy this and keep it in your notes or email it to yourself.</p><textarea readonly style="min-height:120px;font:12px var(--mono)">${esc(t)}</textarea><button class="abtn" id="cpb">Copy backup</button>`;$("#cpb").onclick=()=>copy(t)};
+    $("#bk").onclick=doBk;
+    $("#rs").onclick=()=>{$("#bkArea").innerHTML=`<p>Paste a backup. This replaces all visits on this device.</p><textarea id="rsT" style="min-height:120px;font:12px var(--mono)"></textarea><button class="abtn" id="rsGo">Restore backup</button>`;
+      $("#rsGo").onclick=()=>{try{const d=JSON.parse($("#rsT").value);if(!d.visits)throw 0;S=Object.assign({tab:"unit",filter:"all"},d);normalize();save();closeSheet();render();toast("Restored "+S.visits.length+" visits")}catch(e){toast("That text isn't a Showroom Walk backup.")}}};
+    if(showBackup)doBk();
+   });
+}
+
+/* settings */
+function openSettings(){
+  const c=C();
+  const seg=(key,opts)=>`<div class="seg" role="group">${opts.map(([v,l])=>`<button data-seg="${key}" data-v="${v}" aria-pressed="${String(c[key])===String(v)}">${l}</button>`).join("")}</div>`;
+  const sw=(key,label,sub)=>`<div class="swrow"><span>${label}${sub?`<br><small style="color:var(--muted)">${sub}</small>`:""}</span><button class="sw" data-sw="${key}" aria-pressed="${!!c[key]}" aria-label="${esc(label)}"></button></div>`;
+  const tf=(key,label,ph,unit,numeric)=>`<label class="f" for="s_${key}">${label}<span class="inp"><input id="s_${key}" data-cfg="${key}" ${numeric?'data-num="1" inputmode="decimal"':""} value="${esc(c[key])}" placeholder="${esc(ph||"")}">${unit?`<span class="u">${unit}</span>`:""}</span></label>`;
+  const ck=orderedSecs().map((s,i,a)=>`<div class="ck"><div class="sh"><span>${esc(s.short)}</span><span class="mv"><button data-mv="${s.id}" data-d="-1" ${i===0?"disabled":""} aria-label="Move ${esc(s.short)} up">↑</button><button data-mv="${s.id}" data-d="1" ${i===a.length-1?"disabled":""} aria-label="Move ${esc(s.short)} down">↓</button></span></div>
+    ${s.items.concat(c.custom.filter(x=>x.sec===s.id).map(x=>defOf(x.id))).map(it=>{const off=c.hidden.includes(it.id);return `<div class="ir ${off?"off":""}"><span>${esc(it.t)}${it.custom?' <small style="color:var(--muted)">(yours)</small>':""}</span><span class="row" style="flex-wrap:nowrap">${it.custom?`<button class="abtn danger" data-delc="${it.id}">Delete</button>`:""}<button class="sw" data-hide="${it.id}" aria-pressed="${!off}" aria-label="Show ${esc(it.t)}"></button></span></div>`}).join("")}</div>`).join("");
+  const scroll=sheet(`<h3>Settings</h3>
+   <h4>My profile</h4><p>Printed at the bottom of every client summary.</p>
+   <div class="sgrid">${tf("name","Name","Mirzan")}${tf("phone","Phone","012-345 6789")}${tf("agency","Agency","e.g. Primex Realty")}${tf("ren","REN number","e.g. 12345")}</div>
+   <h4>Client summary</h4>
+   <div class="row"><span style="min-width:90px">Language</span>${seg("lang",[["bm","BM"],["en","English"],["mix","Rojak"]])}</div>
+   ${sw("emoji","Emojis in summary")}
+   <h4>Units</h4>
+   <div class="row"><span style="min-width:90px">Area</span>${seg("area",[["sqft","sq ft"],["sqm","sq m"]])}</div>
+   <div class="row"><span style="min-width:90px">Height</span>${seg("len",[["mm","mm"],["ft","feet"]])}</div>
+   <h4>Defaults</h4><p>Used when a field is left blank. Each unit type can still override the loan figures.</p>
+   <div class="sgrid">${tf("margin","Loan margin","90","%",1)}${tf("rate","Interest rate","4.2","% p.a.",1)}${tf("tenure","Tenure","35","yrs",1)}${tf("dsr","Bank DSR limit","60","%",1)}${tf("sinkPct","Sinking fund","10","% of SC",1)}${tf("liftWarn","Crowded lift above","8","units/lift",1)}</div>
+   <h4>Edit checklist</h4><p>Hide items you don't use, reorder the tabs, or add your own.</p>
+   <div class="cklist">${ck}</div>
+   <div class="ck" style="padding:10px;display:flex;flex-direction:column;gap:8px"><strong style="font-size:14px">Add your own item</strong>
+    <div class="sgrid">
+     <label class="f" for="cSec">Tab<span class="inp"><select id="cSec">${orderedSecs().map(s=>`<option value="${s.id}">${esc(s.short)}</option>`).join("")}</select></span></label>
+     <label class="f" for="cT">Item<span class="inp"><input id="cT" placeholder="e.g. Distance to LRT"></span></label></div>
+    <label class="f" for="cH">Hint (optional)<span class="inp"><input id="cH" placeholder="What to check"></span></label>
+    <label class="f" for="cC">Quick-pick chips (optional, comma separated)<span class="inp"><input id="cC" placeholder="e.g. Walking distance, Need feeder bus"></span></label>
+    ${`<div class="swrow"><span>Separate per unit type</span><button class="sw" id="cPer" aria-pressed="false" aria-label="Separate per unit type"></button></div>`}
+    <button class="abtn" id="cAdd" style="align-self:flex-start">Add item</button></div>
+   <h4>Display</h4>
+   <div class="row"><span style="min-width:90px">Theme</span>${seg("theme",[["auto","Auto"],["light","Light"],["dark","Dark"]])}</div>
+   ${sw("big","Large text","Easier to read in a bright gallery")}
+   <h4>Data</h4>
+   ${sw("backupRemind","Backup reminder","Shows a banner when your last backup is over 7 days old")}
+   <div class="row"><button class="abtn" id="addSample">Add sample visits</button><button class="abtn danger" id="clearAll">Clear all data</button></div>
+   <button class="bbtn" data-close>Done</button>`,host=>{
+    host.querySelectorAll("[data-seg]").forEach(b=>b.onclick=()=>{c[b.dataset.seg]=b.dataset.v;save();applyDisplay();openSettings()});
+    host.querySelectorAll("[data-sw]").forEach(b=>b.onclick=()=>{c[b.dataset.sw]=!c[b.dataset.sw];b.setAttribute("aria-pressed",!!c[b.dataset.sw]);save();applyDisplay()});
+    host.querySelectorAll("[data-cfg]").forEach(i=>i.oninput=()=>{const k=i.dataset.cfg;if(i.dataset.num){const n=num(i.value);if(n!=null&&n>=0)c[k]=n}else c[k]=i.value;save()});
+    host.querySelectorAll("[data-mv]").forEach(b=>b.onclick=()=>{const o=c.order,i=o.indexOf(b.dataset.mv),j=i+ +b.dataset.d;if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]];save();openSettings()});
+    host.querySelectorAll("[data-hide]").forEach(b=>b.onclick=()=>{const id=b.dataset.hide;c.hidden=c.hidden.includes(id)?c.hidden.filter(x=>x!==id):[...c.hidden,id];save();openSettings()});
+    host.querySelectorAll("[data-delc]").forEach(b=>b.onclick=()=>{if(!b.dataset.armed){b.dataset.armed=1;b.textContent="Confirm";return}c.custom=c.custom.filter(x=>x.id!==b.dataset.delc);save();openSettings()});
+    $("#cPer").onclick=e=>{const b=e.currentTarget;b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")!=="true")};
+    $("#cAdd").onclick=()=>{const t=$("#cT").value.trim();if(!t){toast("Give the item a name first.");$("#cT").focus();return}
+      c.custom.push({id:"c_"+uid(),sec:$("#cSec").value,t,h:$("#cH").value.trim(),chips:$("#cC").value.split(",").map(x=>x.trim()).filter(Boolean),per:$("#cPer").getAttribute("aria-pressed")==="true"});save();openSettings();toast("Item added")};
+    $("#addSample").onclick=()=>{S.visits.push(...samples());save();renderHeader();toast("Sample visits added")};
+    $("#clearAll").onclick=e=>{const b=e.currentTarget;if(!b.dataset.armed){b.dataset.armed=1;b.textContent="Tap again to erase everything";return}
+      const v=blankVisit("Visit 1");S.visits=[v];S.cur=v.id;S.lastBackup=0;save();closeSheet();render();toast("All data cleared")};
+  });
+  const sh=document.querySelector(".sheet");if(sh&&scroll)sh.scrollTop=scroll;
+}
+$("#setBtn").addEventListener("click",openSettings);
+
+/* ---------- sample reels ---------- */
+const MOVES={pan:"Pan →",panl:"← Pan",push:"Push in",pull:"Pull back",tilt:"Tilt up",tiltd:"Tilt down",orbit:"Slow orbit",hold:"Hold"};
+const REELS={
+ condo:{name:"Condo",shots:[
+  {s:"tower",m:"tilt",d:5,a:[140,280],t:"Tower exterior",tip:"Start at the entrance canopy and tilt up slowly to the top floors."},
+  {s:"lobby",m:"push",d:5,t:"Lift lobby",tip:"Walk in towards the lifts at a steady pace. Shows the finishing level."},
+  {s:"model",m:"orbit",d:6,t:"Scale model: your stack",tip:"Circle the model slowly, end on the block and stack you're selling."},
+  {s:"pool",m:"pan",d:7,t:"Facilities deck",tip:"Pan along the pool deck. Pause briefly on gym or co-working if you can."},
+  {s:"foyer",m:"push",d:5,t:"Entrance foyer",tip:"Start outside the unit door and move in. Sets the scale for buyers."},
+  {s:"living",m:"pan",d:7,t:"Living & dining",tip:"Pan from the dining area to the window. Keep the phone level."},
+  {s:"kitchen",m:"panl",d:6,t:"Kitchen handover area",tip:"Film only what's included at handover. Skip ID add-ons."},
+  {s:"bed",m:"push",d:6,t:"Master bedroom",tip:"From the doorway, push towards the window and let the light fill the frame."},
+  {s:"bath",m:"tiltd",d:4,t:"Bathroom",tip:"Tilt down from the shower head to the vanity. Keep it short."},
+  {s:"balcony",m:"pan",d:9,t:"Balcony view",tip:"End on the view. Slow pan left to right, hold the last 2 seconds."}]},
+ landed:{name:"Landed house",shots:[
+  {s:"guard",m:"push",d:5,t:"Guardhouse & gated entry",tip:"Drive or walk towards the boom gate. Security sells landed homes."},
+  {s:"street",m:"pan",d:6,t:"Street & neighbourhood",tip:"Pan along the road to show width, trees and the house row."},
+  {s:"facade",m:"pull",d:6,t:"House facade",tip:"Start close on the front door, pull back to show both storeys."},
+  {s:"porch",m:"panl",d:4,t:"Car porch & gate",tip:"Show how many cars fit. Pan across the porch."},
+  {s:"living",m:"pan",d:7,t:"Living & dining",tip:"Pan through the ground floor towards the back door."},
+  {s:"kitchen",m:"panl",d:6,t:"Wet & dry kitchen",tip:"Show the dry kitchen, then the wet kitchen and yard door."},
+  {s:"stair",m:"tilt",d:4,a:[80,80],t:"Staircase",tip:"Tilt up the staircase to lead the viewer upstairs."},
+  {s:"bed",m:"push",d:6,t:"Master bedroom",tip:"From the doorway, push in slowly towards the window."},
+  {s:"bath",m:"tiltd",d:4,t:"Master bathroom",tip:"Tilt down from the shower to the vanity."},
+  {s:"yard",m:"pan",d:5,t:"Backyard",tip:"Show the depth of the back yard and the fence line."},
+  {s:"pool",m:"pan",d:7,t:"Clubhouse & park",tip:"Close on the shared facilities. Hold the last 2 seconds."}]}
+};
+const RW=270,RH=480;
+const ease=p=>.5-.5*Math.cos(Math.PI*Math.min(1,Math.max(0,p)));
+function drawScene(ctx,name,col,tm){
+  ctx.fillStyle=col.paper;ctx.fillRect(-300,-400,RW+600,RH+800);
+  ctx.strokeStyle=col.ink;ctx.lineWidth=2;ctx.lineCap="round";ctx.lineJoin="round";
+  const L=(...p)=>{ctx.beginPath();ctx.moveTo(p[0],p[1]);for(let i=2;i<p.length;i+=2)ctx.lineTo(p[i],p[i+1]);ctx.stroke()};
+  const P=(p,f)=>{ctx.beginPath();ctx.moveTo(p[0],p[1]);for(let i=2;i<p.length;i+=2)ctx.lineTo(p[i],p[i+1]);ctx.closePath();if(f){ctx.fillStyle=f;ctx.fill()}ctx.stroke()};
+  const R=(x,y,w,h,f)=>{if(f){ctx.fillStyle=f;ctx.fillRect(x,y,w,h)}ctx.strokeRect(x,y,w,h)};
+  const Ci=(x,y,r,f)=>{ctx.beginPath();ctx.arc(x,y,r,0,7);if(f){ctx.fillStyle=f;ctx.fill()}ctx.stroke()};
+  const El=(x,y,rx,ry,f)=>{ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,7);if(f){ctx.fillStyle=f;ctx.fill()}ctx.stroke()};
+  const faint=fn=>{ctx.save();ctx.globalAlpha=.3;ctx.lineWidth=1.2;fn();ctx.restore()};
+  const box=(x,y,w,h,f)=>{const top=[x,y-h,x+w,y-h-w/2,x,y-h-w,x-w,y-h-w/2];P([x-w,y-w/2,x,y,x,y-h,x-w,y-h-w/2],f||col.paper);P([x,y,x+w,y-w/2,x+w,y-h-w/2,x,y-h],f||col.paper);P(top,col.paper)};
+  const room=()=>{const b=[55,140,215,330];P([b[0],b[1],b[2],b[1],b[2],b[3],b[0],b[3]]);L(b[0],b[1],-160,-180);L(b[2],b[1],430,-180);L(b[0],b[3],-160,720);L(b[2],b[3],430,720);
+    faint(()=>{for(let k=1;k<6;k++){const y=b[3]+k*k*13,f=(y-b[3])/(720-b[3]);L(b[0]+f*(-160-b[0]),y,b[2]+f*(430-b[2]),y)}for(let k=1;k<4;k++){const x=b[0]+k*(b[2]-b[0])/4;L(x,b[3],135+(x-135)*4.2,720)}})};
+  const sky=()=>{Ci(222,70,16,col.tape)};
+  switch(name){
+   case "tower":Ci(225,-250,18,col.tape);R(30,-310,95,830);R(148,-200,82,720);
+     faint(()=>{for(let y=-290;y<500;y+=24){L(30,y,125,y)}for(let y=-180;y<500;y+=24)L(148,y,230,y);[54,78,102].forEach(x=>L(x,-310,x,520));[175,202].forEach(x=>L(x,-200,x,520))});
+     ctx.save();ctx.globalAlpha=.55;ctx.fillStyle=col.soft;ctx.fillRect(79,-310,22,830);ctx.restore();
+     L(-200,520,480,520);R(52,468,62,9,col.paper);[ -20,10,250,280].forEach(x=>{L(x,520,x,495);Ci(x,482,14,col.paper)});break;
+   case "lobby":room();R(66,195,54,135);R(150,195,54,135);L(93,195,93,330);L(177,195,177,330);Ci(135,265,4,col.tape);R(82,180,22,9,col.soft);R(166,180,22,9,col.soft);[95,175].forEach(x=>Ci(x,-20,6,col.tape));break;
+   case "model":P([10,330,135,268,260,330,135,392],col.paper);faint(()=>{for(let k=1;k<6;k++){const f=k/6;L(10+125*f,330-62*f,135+125*f,392-62*f);L(135-125*f,392-62*f,260-125*f,330-62*f)}});
+     box(95,335,26,120);box(180,330,24,95,col.soft);box(140,368,18,40);R(150,300,40,14,col.soft);[40,232,70].forEach((x,i)=>Ci(x,330+(i%2)*14,7,col.paper));break;
+   case "pool":R(-80,-120,70,460,col.paper);faint(()=>{for(let y=-110;y<340;y+=22)L(-80,y,-10,y)});L(-200,300,480,300);
+     P([60,305,215,305,320,540,-50,540],col.soft);faint(()=>{for(let r=0;r<5;r++){const y=330+r*42;ctx.beginPath();for(let x=-40;x<=320;x+=6)ctx.lineTo(x,y+Math.sin(x/16+tm*2+r)*3);ctx.stroke()}});
+     [250,300].forEach(x=>{P([x,330,x+40,320,x+46,334,x+6,344])});L(370,270,370,360);P([330,272,410,272,370,248],col.tape);sky();break;
+   case "foyer":room();R(100,185,70,145,col.soft);L(118,330,118,185);R(62,285,32,45);R(64,200,28,50);[100,170].forEach(x=>Ci(x,40,5,col.tape));break;
+   case "living":room();R(110,165,50,58);L(135,165,135,223);L(110,194,160,194);P([70,345,200,345,245,430,25,430],col.soft);
+     P([70,268,200,268,200,298,70,298],col.paper);R(62,298,146,28,col.paper);R(55,282,16,46,col.paper);R(199,282,16,46,col.paper);El(135,388,46,12,col.paper);
+     L(135,-180,135,112);Ci(135,122,10,col.tape);R(290,250,70,50,col.paper);[300,350].forEach(x=>L(x,300,x,340));break;
+   case "kitchen":room();R(65,165,140,45,col.paper);[100,135,170].forEach(x=>L(x,165,x,210));P([115,210,155,210,165,232,105,232],col.paper);
+     R(55,268,160,12,col.soft);R(60,280,150,50,col.paper);[110,160].forEach(x=>L(x,280,x,330));R(76,270,34,6);Ci(146,274,4);Ci(162,274,4);
+     P([30,420,240,420,268,462,2,462],col.soft);R(2,462,266,110,col.paper);break;
+   case "bed":room();R(80,158,110,72,col.soft);L(135,158,135,230);faint(()=>{for(let x=84;x<100;x+=4)L(x,158,x,230);for(let x=172;x<188;x+=4)L(x,158,x,230)});
+     R(85,236,100,40,col.paper);R(55,282,24,32,col.paper);R(191,282,24,32,col.paper);Ci(67,270,7,col.tape);
+     P([85,276,185,276,245,425,25,425],col.paper);R(95,262,35,16,col.paper);R(140,262,35,16,col.paper);L(55,350,215,350);R(25,425,220,30,col.paper);break;
+   case "bath":room();R(76,158,66,58,col.soft);R(64,250,92,45,col.paper);El(110,256,20,5,col.paper);L(110,245,110,236);
+     ctx.save();ctx.globalAlpha=.45;ctx.fillStyle=col.soft;ctx.fillRect(168,140,48,190);ctx.restore();P([168,140,216,140,216,330,168,330]);L(198,148,198,162);Ci(198,166,5);El(190,318,12,7,col.paper);break;
+   case "balcony":sky();[[-160,180],[-110,120],[-60,210],[-10,150],[40,230],[95,160],[150,200],[210,130],[265,190],[320,150],[370,210]].forEach(([x,h])=>{R(x,300-h,44,h,col.paper);faint(()=>{for(let y=300-h+12;y<300;y+=14)L(x+6,y,x+38,y)})});
+     L(-300,300,600,300);R(-300,460,900,120,col.paper);L(-300,330,600,330);L(-300,458,600,458);faint(()=>{});for(let x=-290;x<600;x+=16)L(x,330,x,458);break;
+   case "guard":L(-200,390,480,390);R(170,232,92,88,col.paper);R(162,222,108,12,col.paper);R(186,252,40,28,col.soft);R(58,300,16,90,col.paper);
+     for(let i=0;i<7;i++){ctx.save();ctx.lineWidth=7;ctx.strokeStyle=i%2?col.paper:col.tape;L(76+i*24,312,100+i*24,312);ctx.restore()}L(76,308,244,308);L(76,316,244,316);R(10,170,96,30,col.paper);faint(()=>{L(20,182,90,182);L(20,190,70,190)});sky();break;
+   case "street":sky();L(-300,262,600,262);P([118,262,152,262,430,620,-160,620]);faint(()=>{for(let k=0;k<6;k++){const y=270+k*k*10;L(135,y,135,y+8+k*2)}});
+     [-120,-70,-20,30].forEach(x=>{R(x,226,42,36,col.paper);P([x,226,x+21,208,x+42,226])});[200,250,300,350].forEach(x=>{R(x,226,42,36,col.paper);P([x,226,x+21,208,x+42,226])});
+     [[60,300],[215,300],[10,360],[265,360]].forEach(([x,y])=>{L(x,y,x,y-40);Ci(x,y-52,16,col.paper)});break;
+   case "facade":sky();L(-300,400,600,400);[-75,45,165].forEach((x,i)=>{R(x,300,120,100,col.paper);R(x,200,120,100,col.paper);P([x-6,200,x+60,145,x+126,200],i===1?col.soft:col.paper);
+     R(x+14,222,36,40);R(x+70,222,36,40);R(x+70,322,36,78,i===1?col.soft:null);R(x+14,322,36,40)});faint(()=>{for(let x=-75;x<285;x+=10)L(x,372,x,400)});L(-75,372,285,372);break;
+   case "porch":R(-60,118,390,20,col.paper);R(222,138,18,300,col.paper);L(-300,438,600,438);
+     P([30,330,60,300,170,300,205,330,215,380,20,380],col.paper);Ci(60,382,15,col.paper);Ci(172,382,15,col.paper);R(72,308,40,20,col.soft);R(118,308,42,20,col.soft);
+     L(-300,300,600,300);for(let x=-290;x<600;x+=18)L(x,300,x,470);L(-300,470,600,470);break;
+   case "stair":room();for(let i=0;i<9;i++){const x=40+i*24,y=560-i*42;L(x,y,x+24,y);L(x+24,y,x+24,y-42)}ctx.save();ctx.strokeStyle=col.tape;ctx.lineWidth=4;L(30,470,260,92);ctx.restore();for(let i=0;i<9;i+=2){const x=52+i*24,y=548-i*42;L(x,y,x,y-82)}break;
+   case "yard":sky();for(let x=-300;x<600;x+=14)L(x,180,x,330);L(-300,180,600,180);L(-300,330,600,330);faint(()=>{for(let i=0;i<40;i++){const x=-280+i*23,y=360+(i*37%140);L(x,y,x+3,y-8);L(x+6,y,x+5,y-9)}});
+     L(230,330,230,250);Ci(230,226,30,col.paper);L(10,215,190,232);[40,80,120,160].forEach((x,i)=>R(x,218+i*4,18,24,i%2?col.soft:col.paper));break;
+  }
+}
+function reelProgress(v,kind){const d=(v.reels&&v.reels[kind])||{};return Object.values(d).filter(Boolean).length}
+function reelCardsHTML(){const v=visit();return `<div class="reelcards">${Object.entries(REELS).map(([k,r])=>{const tot=r.shots.reduce((a,s)=>a+s.d,0);
+  return `<button class="rcard" data-reel="${k}"><span class="k">Sample reel</span><strong>${esc(r.name)}</strong><span class="p">${r.shots.length} shots · ${tot} s · 9:16</span><span class="p"><b>${reelProgress(v,k)}</b>/${r.shots.length} filmed here</span></button>`}).join("")}</div>`}
+let reelRAF=null;
+function openReel(kind){
+  const R0=REELS[kind],v=visit();v.reels=v.reels||{};v.reels[kind]=v.reels[kind]||{};const done=v.reels[kind];
+  const total=R0.shots.reduce((a,s)=>a+s.d,0),starts=[];let acc=0;R0.shots.forEach(s=>{starts.push(acc);acc+=s.d});
+  const play='<svg viewBox="0 0 20 20" fill="currentColor"><path d="M6 4l10 6-10 6z"/></svg>',pause='<svg viewBox="0 0 20 20" fill="currentColor"><rect x="5" y="4" width="3.5" height="12"/><rect x="11.5" y="4" width="3.5" height="12"/></svg>';
+  sheet(`<h3>Sample reel · ${esc(R0.name)}</h3><p>A storyboard of a ${total}-second vertical listing video. Watch the framing and camera moves, then tick each shot as you film your own.</p>
+   <div class="rfmt">Format: 9:16 vertical · calm pacing · no music · your number on screen · no project name</div>
+   <div class="reelgrid"><div><div class="reel"><canvas id="rc" aria-label="Animated storyboard of the ${esc(R0.name)} sample reel"></canvas>
+     <div class="segs">${R0.shots.map(s=>`<i style="flex:${s.d}"><b></b></i>`).join("")}</div>
+     <span class="rno" id="rno"></span><span class="rmove" id="rmv"></span>
+     <div class="rph">${esc(C().phone||"")}</div>
+     <div class="rcap"><b id="rt"></b><span id="rs"></span></div></div>
+     <div class="rctl"><button id="rPrev" aria-label="Previous shot"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M14 4L6 10l8 6z"/><rect x="4" y="4" width="2" height="12"/></svg></button><button class="pp" id="rPlay" aria-label="Pause">${pause}</button><button id="rNext" aria-label="Next shot"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M6 4l8 6-8 6z"/><rect x="14" y="4" width="2" height="12"/></svg></button></div></div>
+    <ol class="shots" id="shotList">${R0.shots.map((s,i)=>`<li data-i="${i}" class="${done[i]?"done":""}"><button class="box" data-sd="${i}" aria-pressed="${!!done[i]}" aria-label="Mark ${esc(s.t)} filmed">${tick}</button>
+      <button class="sj" data-sj="${i}"><strong>${String(i+1).padStart(2,"0")} ${esc(s.t)}<em>${MOVES[s.m]} · ${s.d}s</em></strong><span>${esc(s.tip)}</span></button></li>`).join("")}</ol></div>
+   <button class="bbtn" data-close>Close</button>`,host=>{
+    const cv=$("#rc"),ctx=cv.getContext("2d"),dpr=Math.min(2,window.devicePixelRatio||1);
+    const fit=()=>{const r=cv.getBoundingClientRect();cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr)};fit();
+    const segs=[...host.querySelectorAll(".segs b")],lis=[...host.querySelectorAll("#shotList li")];
+    const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let t=0,playing=!reduce,last=performance.now(),curI=-1;
+    const setPlay=p=>{playing=p;const b=$("#rPlay");b.innerHTML=p?pause:play;b.setAttribute("aria-label",p?"Pause":"Play")};setPlay(playing);
+    const jump=i=>{t=starts[(i+R0.shots.length)%R0.shots.length]+.001;last=performance.now()};
+    $("#rPlay").onclick=()=>{setPlay(!playing);last=performance.now()};
+    $("#rPrev").onclick=()=>jump(curI-1);$("#rNext").onclick=()=>jump(curI+1);
+    host.querySelectorAll("[data-sj]").forEach(b=>b.onclick=()=>{jump(+b.dataset.sj);if(!playing)frame(performance.now(),true)});
+    host.querySelectorAll("[data-sd]").forEach(b=>b.onclick=()=>{const i=b.dataset.sd;done[i]=!done[i];b.setAttribute("aria-pressed",!!done[i]);b.closest("li").classList.toggle("done",!!done[i]);save()});
+    if(reelRAF)cancelAnimationFrame(reelRAF);
+    function frame(now,once){
+      if(!cv.isConnected){reelRAF=null;return}
+      if(playing){t+=(now-last)/1000;if(t>=total)t=0}last=now;
+      let i=0;while(i<starts.length-1&&t>=starts[i+1])i++;
+      const s=R0.shots[i],p=ease((t-starts[i])/s.d);
+      if(i!==curI){curI=i;$("#rno").textContent=`${String(i+1).padStart(2,"0")}/${R0.shots.length}`;$("#rmv").textContent=MOVES[s.m];$("#rt").textContent=s.t;$("#rs").textContent=`${MOVES[s.m]} · hold ${s.d}s`;
+        lis.forEach((li,k)=>li.classList.toggle("on",k===i))}
+      segs.forEach((b,k)=>b.style.width=(k<i?100:k>i?0:(t-starts[i])/s.d*100)+"%");
+      const cs=getComputedStyle(document.documentElement),col={paper:cs.getPropertyValue("--paper").trim(),ink:cs.getPropertyValue("--ink").trim(),tape:cs.getPropertyValue("--tape").trim(),soft:cs.getPropertyValue("--tape-soft").trim()};
+      const sc=cv.width/RW;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.setTransform(sc,0,0,sc,0,0);
+      const a=s.a||[60,60];ctx.translate(RW/2,RH/2);
+      if(s.m==="push")ctx.scale(1+.28*p,1+.28*p);
+      if(s.m==="pull")ctx.scale(1.3-.3*p,1.3-.3*p);
+      if(s.m==="orbit"){ctx.scale(1.1-.08*Math.sin(p*Math.PI),1.1);ctx.rotate((p-.5)*.12)}
+      ctx.translate(-RW/2,-RH/2);
+      if(s.m==="pan")ctx.translate(70-140*p,0);
+      if(s.m==="panl")ctx.translate(-70+140*p,0);
+      if(s.m==="tilt")ctx.translate(0,-a[0]+(a[0]+a[1])*p);
+      if(s.m==="tiltd")ctx.translate(0,a[1]-(a[0]+a[1])*p);
+      if(s.m==="push"||s.m==="pull"||s.m==="hold"||s.m==="orbit")ctx.translate(0,0);
+      drawScene(ctx,s.s,col,t);
+      if(!once)reelRAF=requestAnimationFrame(frame);
+    }
+    reelRAF=requestAnimationFrame(frame);
+    if(reduce)frame(performance.now(),true);
+  });
+}
+
+window.__back=()=>{if($("#sheetHost").innerHTML){closeSheet();render();return true}if(openItem){openItem=null;renderMain();return true}return false};
+const hostTheme=document.documentElement.getAttribute("data-theme");
+load();render();
+</script>
+</body>
+</html>
